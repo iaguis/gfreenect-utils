@@ -237,7 +237,7 @@ main (int argc, char *argv[])
 
   if (argc < 2)
     {
-      g_print ("Usage: %s DEPTH_FILE [COLOR_STRING POINT_X POINT_Y]\n",
+      g_print ("Usage: %s DEPTH_FILE [COLOR_STRINGS POINTS_LIST]\n",
                argv[0]);
       return 0;
     }
@@ -257,19 +257,45 @@ main (int argc, char *argv[])
     {
       if ((argc - 2) % 3 == 0)
         {
-          guint i;
-          for (i = 2; i < argc; i+=3)
+          guint i, j;
+          guint ncolors;
+          guint ncoords;
+          guint idx;
+
+          ncolors = (argc - 2) / 3;
+          ncoords = (argc - 2) / 3 * 2 * 2;
+
+
+          gchar **colors;
+          gint *coords;
+
+          colors = g_slice_alloc (sizeof (gchar *) * ncolors);
+          coords = g_slice_alloc (sizeof (gint *) * ncoords);
+
+          for (i = 2, idx = 0; i < (ncolors + 2); i++, idx++)
             {
-              gchar *color;
-              guint x, y;
-              color = argv[i];
-              x = g_ascii_strtod (argv[i + 1], NULL);
-              y = g_ascii_strtod (argv[i + 2], NULL);
-              if (errno == 0)
+              colors[idx] = argv[i];
+            }
+
+          for (i = ncolors+2, idx = 0; i < argc; i+=2, idx+=2)
+            {
+              coords[idx]   = g_ascii_strtod(argv[i], NULL);
+              coords[idx+1] = g_ascii_strtod(argv[i+1], NULL);
+              if (errno != 0)
                 {
-                  draw_point (buffer, width, height, color, x, y);
+                  return -1;
                 }
             }
+
+          for (i=0, j=0; i < (ncolors); i++, j+=2)
+            {
+              if (coords[j] != -1)
+                draw_point (buffer, width, height, colors[i], coords[j],
+                  coords[j+1]);
+            }
+
+          g_slice_free1 (sizeof (gchar *) * ncolors, colors);
+          g_slice_free1 (sizeof (gint *) * ncoords, coords);
         }
       else
         {
