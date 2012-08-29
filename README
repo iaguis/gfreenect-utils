@@ -30,4 +30,4 @@ The following example shows the file named "depth-file-name"
 with the points at 200,300 and 150,250 highlighted as a
 green and a red square, respectively:
 
-  $ depth-file-viewer depth-file-name \#00ff00 200 300 \#ff0000 150 250
+  $ depth-file-viewer depth-file-name \#00ff00 \#ff0000 200 300 150 250
