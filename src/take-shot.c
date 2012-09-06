@@ -33,12 +33,16 @@ static ClutterActor *video_tex;
 static guint THRESHOLD_BEGIN = 500;
 /* Adjust this value to increase of decrease
    the threshold */
-static guint THRESHOLD_END   = 1500;
+static guint THRESHOLD_END   = 4000;
 
 static guint shot_timeout_id = 0;
 static gboolean record_shot = FALSE;
 static gint DEFAULT_SECONDS_TO_SHOOT = 2;
 static gint seconds_to_shoot = 2;
+static gint seconds_to_record = 5;
+static GTimer *timer;
+
+static gchar *directory_name;
 
 typedef struct
 {
@@ -206,9 +210,11 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
 
   if (record_shot)
     {
-      g_debug ("Taking shot...");
+      g_debug ("Taking video...");
       GError *error = NULL;
-      gchar *name = g_strdup_printf ("./depth-data-%d", g_get_real_time ());
+      gchar *name = g_strdup_printf ("depth-data-%d", g_get_real_time ());
+      name = g_strconcat (directory_name, "/", name, NULL);
+      g_printf ("name = %s\n", name);
       g_file_set_contents (name, (gchar *) buffer_info->reduced_buffer,
                            width * height * sizeof (guint16), &error);
       if (error != NULL)
@@ -219,8 +225,11 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
         {
           g_print ("Created file: %s\n", name);
         }
-
-      record_shot = FALSE;
+      if (g_timer_elapsed (timer, NULL) >= seconds_to_record)
+        {
+          record_shot = FALSE;
+          g_print ("Recording stopped\n");
+        }
     }
 
   if (! clutter_texture_set_from_rgb_data (CLUTTER_TEXTURE (depth_tex),
@@ -274,7 +283,7 @@ set_info_text (gint seconds)
     }
   else if (seconds > 0)
     {
-      record_status = g_strdup_printf (" <b>Taking shot in:</b> %d seconds",
+      record_status = g_strdup_printf (" <b>Taking video in:</b> %d seconds",
                                        seconds);
     }
 
@@ -327,6 +336,7 @@ decrease_time_to_take_shot (gpointer data)
   else if (seconds_to_shoot == 0)
     {
       record_shot = TRUE;
+      g_timer_start (timer);
     }
   seconds_to_shoot--;
   return call_again;
@@ -497,6 +507,22 @@ main (int argc, char *argv[])
                         NULL);
 
   signal (SIGINT, quit);
+
+  if (argc < 2)
+    {
+      g_printf ("Use: %s VIDEO_DIRECTORY\n", argv[0]);
+      return 0;
+    }
+
+  directory_name = argv[1];
+
+  if (g_mkdir (directory_name, 0750) != 0)
+    {
+      g_printf ("Error creating directory %s\n", directory_name);
+      return -1;
+    }
+
+  timer = g_timer_new ();
 
   clutter_main ();
 
