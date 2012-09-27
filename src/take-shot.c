@@ -33,7 +33,7 @@ static ClutterActor *video_tex;
 static guint THRESHOLD_BEGIN = 500;
 /* Adjust this value to increase of decrease
    the threshold */
-static guint THRESHOLD_END   = 4000;
+static guint THRESHOLD_END   = 8000;
 
 static guint shot_timeout_id = 0;
 static gboolean record_shot = FALSE;
