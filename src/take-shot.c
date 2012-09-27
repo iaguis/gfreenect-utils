@@ -44,6 +44,8 @@ static GTimer *timer;
 
 static gchar *directory_name;
 
+static gboolean VERTICAL = FALSE;
+
 typedef struct
 {
   guint16 *reduced_buffer;
@@ -194,9 +196,28 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
       g_debug ("ERROR Opening: %s", error->message);
     }
 
-
   width = frame_mode.width;
   height = frame_mode.height;
+  if (VERTICAL)
+    {
+      guint i, j;
+      guint16 *transformed_depth;
+
+      transformed_depth = g_slice_alloc (width * height * sizeof (guint16));
+
+      for (j = 0; j < width; j++)
+        {
+          for (i = height - 1; i > 0; i--)
+            {
+              transformed_depth[((width -1 - j) * height + ((height - 1) - i))] = depth[i * width + j];
+            }
+        }
+
+      depth = transformed_depth;
+
+      width = frame_mode.height;
+      height = frame_mode.width;
+    }
 
   buffer_info = process_buffer (depth,
                                 width,
@@ -251,15 +272,42 @@ static void
 on_video_frame (GFreenectDevice *kinect, gpointer user_data)
 {
   guchar *buffer;
+  guint width, height;
   GError *error = NULL;
   GFreenectFrameMode frame_mode;
 
   buffer = gfreenect_device_get_video_frame_rgb (kinect, NULL, &frame_mode);
 
+  width = frame_mode.width;
+  height = frame_mode.height;
+
+  if (VERTICAL)
+    {
+      guint i, j;
+      guchar *transformed_buffer;
+
+      transformed_buffer = g_slice_alloc (sizeof (gchar) * width * height * 3);
+
+      for (j = 0; j < width; j++)
+        {
+          for (i = height - 1; i > 0; i--)
+            {
+              transformed_buffer[((width -1 - j) * height + ((height - 1) - i)) * 3] = buffer[(i * width + j) * 3];
+              transformed_buffer[((width -1 - j) * height + ((height - 1) - i)) * 3 + 1] = buffer[(i * width + j) * 3 + 1];
+              transformed_buffer[((width -1 - j) * height + ((height - 1) - i)) * 3 + 2] = buffer[(i * width + j) * 3 + 2];
+            }
+        }
+
+      buffer = transformed_buffer;
+      width = frame_mode.height;
+      height = frame_mode.width;
+    }
+
+
   if (! clutter_texture_set_from_rgb_data (CLUTTER_TEXTURE (video_tex),
                                            buffer,
                                            FALSE,
-                                           frame_mode.width, frame_mode.height,
+                                           width, height,
                                            0,
                                            frame_mode.bits_per_pixel / 8,
                                            CLUTTER_TEXTURE_NONE,
@@ -371,6 +419,9 @@ on_key_release (ClutterActor *actor,
   key = clutter_event_get_key_symbol (event);
   switch (key)
     {
+    case CLUTTER_KEY_o:
+      VERTICAL = !VERTICAL;
+      break;
     case CLUTTER_KEY_space:
       seconds = 3;
       take_shot ();
@@ -402,7 +453,8 @@ create_instructions (void)
                          "<b>Instructions:</b>\n"
                          "\tTake shot and save:  \tSpace bar\n"
                          "\tSet tilt angle:  \t\t\t\tUp/Down Arrows\n"
-                         "\tIncrease threshold:  \t\t\t+/-");
+                         "\tIncrease threshold:  \t\t\t+/-\n"
+                         "\tSwitch orientation: \t\t\to");
   return text;
 }
 
