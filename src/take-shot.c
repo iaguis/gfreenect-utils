@@ -233,7 +233,7 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
     {
       g_debug ("Taking video...");
       GError *error = NULL;
-      gchar *name = g_strdup_printf ("depth-data-%d", g_get_real_time ());
+      gchar *name = g_strdup_printf ("depth-data-%ld", g_get_real_time ());
       name = g_strconcat (directory_name, "/", name, NULL);
       g_printf ("name = %s\n", name);
       g_file_set_contents (name, (gchar *) buffer_info->reduced_buffer,
