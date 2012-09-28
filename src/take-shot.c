@@ -182,6 +182,7 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
   gint width, height;
   guchar *grayscale_buffer;
   guint16 *depth;
+  guint16 *transformed_depth;
   gchar *contents;
   BufferInfo *buffer_info;
   gsize len;
@@ -201,7 +202,6 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
   if (VERTICAL)
     {
       guint i, j;
-      guint16 *transformed_depth;
 
       transformed_depth = g_slice_alloc (width * height * sizeof (guint16));
 
@@ -228,6 +228,8 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
 
   grayscale_buffer = create_grayscale_buffer (buffer_info,
                                               1);
+
+  g_slice_free1 (sizeof (guint16) * width * height, transformed_depth);
 
   if (record_shot)
     {
@@ -266,12 +268,16 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
       g_error_free (error);
     }
   g_slice_free1 (width * height * sizeof (guchar) * 3, grayscale_buffer);
+  g_slice_free1 (buffer_info->reduced_width * buffer_info->reduced_height *
+                 sizeof (guint16), buffer_info->reduced_buffer);
+  g_slice_free (BufferInfo, buffer_info);
 }
 
 static void
 on_video_frame (GFreenectDevice *kinect, gpointer user_data)
 {
   guchar *buffer;
+  guchar *transformed_buffer;
   guint width, height;
   GError *error = NULL;
   GFreenectFrameMode frame_mode;
@@ -284,7 +290,6 @@ on_video_frame (GFreenectDevice *kinect, gpointer user_data)
   if (VERTICAL)
     {
       guint i, j;
-      guchar *transformed_buffer;
 
       transformed_buffer = g_slice_alloc (sizeof (gchar) * width * height * 3);
 
@@ -316,6 +321,8 @@ on_video_frame (GFreenectDevice *kinect, gpointer user_data)
       g_debug ("Error setting texture area: %s", error->message);
       g_error_free (error);
     }
+
+  g_slice_free1 (sizeof (gchar) * width * height * 3, transformed_buffer);
 }
 
 static void
