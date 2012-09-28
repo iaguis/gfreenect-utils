@@ -375,7 +375,7 @@ set_threshold (gint difference)
 {
   gint new_threshold = THRESHOLD_END + difference;
   if (new_threshold >= THRESHOLD_BEGIN + 300 &&
-      new_threshold <= 4000)
+      new_threshold <= 8000)
     THRESHOLD_END = new_threshold;
 }
 
