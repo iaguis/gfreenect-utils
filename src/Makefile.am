@@ -14,12 +14,12 @@ AM_CFLAGS = \
 	-Wall \
 	-g
 
-bin_PROGRAMS = record-depth-file depth-file-viewer
+bin_PROGRAMS = record-video depth-file-viewer
 
-record_depth_file_SOURCES = \
-	take-shot.c
+record_video_SOURCES = \
+	take-video.c
 
-record_depth_file_LDADD = \
+record_video_LDADD = \
 	$(GFREENECT_LIBS) \
 	$(MAIN_DEPS_LIBS)
 
