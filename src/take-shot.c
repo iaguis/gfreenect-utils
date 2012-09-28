@@ -349,10 +349,13 @@ on_video_frame (GFreenectDevice *kinect, gpointer user_data)
 static void
 set_info_text (gint seconds)
 {
-  gchar *title, *threshold;
+  gchar *title, *threshold, *seconds_text;
   gchar *record_status = NULL;
-  threshold = g_strdup_printf ("<b>Threshold:</b> %d",
+  threshold = g_strdup_printf ("<b>Threshold:</b> %d\n",
                                THRESHOLD_END);
+  seconds_text = g_strdup_printf ("<b>Seconds to record:</b> %d",
+                                  seconds_to_record);
+
   if (seconds == 0)
     {
       record_status = g_strdup (" <b>SAVING DEPTH FILE!</b>");
@@ -363,10 +366,11 @@ set_info_text (gint seconds)
                                        seconds);
     }
 
-  title = g_strconcat (threshold, record_status, NULL);
+  title = g_strconcat (threshold, seconds_text, record_status, NULL);
   clutter_text_set_markup (CLUTTER_TEXT (info_text), title);
   g_free (title);
   g_free (threshold);
+  g_free (seconds_text);
   g_free (record_status);
 }
 
@@ -471,6 +475,12 @@ on_key_press (ClutterActor *actor,
     case CLUTTER_KEY_Down:
       set_tilt_angle (kinect, -5);
       break;
+    case CLUTTER_KEY_k:
+      seconds_to_record += 1;
+      break;
+    case CLUTTER_KEY_j:
+      seconds_to_record -= 1;
+      break;
     }
   set_info_text (seconds);
   return TRUE;
@@ -487,7 +497,8 @@ create_instructions (void)
                          "\tTake shot and save:  \tSpace bar\n"
                          "\tSet tilt angle:  \t\t\t\tUp/Down Arrows\n"
                          "\tIncrease threshold:  \t\t\t+/-\n"
-                         "\tSwitch orientation: \t\t\to");
+                         "\tSwitch orientation: \t\t\to\n"
+                         "\tSet seconds to record: \t\t\tj/k");
   return text;
 }
 
