@@ -38,6 +38,7 @@ static guint THRESHOLD_END   = 8000;
 
 static guint shot_timeout_id = 0;
 static gboolean record_shot = FALSE;
+static gboolean record_video = FALSE;
 static gint DEFAULT_SECONDS_TO_SHOOT = 2;
 static gint seconds_to_shoot = 2;
 static gint seconds_to_record = 5;
@@ -252,7 +253,7 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
 
   g_slice_free1 (sizeof (guint16) * width * height, transformed_depth);
 
-  if (record_shot)
+  if (record_shot || record_video)
     {
       g_debug ("Taking video...");
       GError *error = NULL;
@@ -269,10 +270,16 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
         {
           g_print ("Created file: %s\n", name);
         }
-      if (g_timer_elapsed (timer, NULL) >= seconds_to_record)
+
+      if (record_video && g_timer_elapsed (timer, NULL) >= seconds_to_record)
+        {
+          record_video = FALSE;
+          g_print ("Recording stopped\n");
+        }
+
+      if (record_shot)
         {
           record_shot = FALSE;
-          g_print ("Recording stopped\n");
         }
     }
 
@@ -347,7 +354,7 @@ on_video_frame (GFreenectDevice *kinect, gpointer user_data)
 }
 
 static void
-set_info_text (gint seconds)
+set_info_text (gint seconds, gint video)
 {
   gchar *title, *threshold, *seconds_text;
   gchar *record_status = NULL;
@@ -358,11 +365,13 @@ set_info_text (gint seconds)
 
   if (seconds == 0)
     {
-      record_status = g_strdup (" <b>SAVING DEPTH FILE!</b>");
+      record_status = g_strdup_printf (" <b>SAVING %s!</b>",
+                                       video? "VIDEO" : "DEPTH FILE");
     }
   else if (seconds > 0)
     {
-      record_status = g_strdup_printf (" <b>Taking video in:</b> %d seconds",
+      record_status = g_strdup_printf (" <b>Taking %s in:</b> %d seconds",
+                                       video? "video" : "shot",
                                        seconds);
     }
 
@@ -406,8 +415,12 @@ set_tilt_angle (GFreenectDevice *kinect, gdouble difference)
 static gboolean
 decrease_time_to_take_shot (gpointer data)
 {
+  guint *video;
   gboolean call_again = TRUE;
-  set_info_text (seconds_to_shoot);
+
+  video = (guint *) data;
+
+  set_info_text (seconds_to_shoot, *video);
   if (seconds_to_shoot < 0)
     {
       seconds_to_shoot = DEFAULT_SECONDS_TO_SHOOT;
@@ -415,16 +428,23 @@ decrease_time_to_take_shot (gpointer data)
     }
   else if (seconds_to_shoot == 0)
     {
-      record_shot = TRUE;
-      g_timer_start (timer);
+      if (*video)
+        {
+          record_video = TRUE;
+          g_timer_start (timer);
+        }
+      else
+        record_shot = TRUE;
     }
   seconds_to_shoot--;
   return call_again;
 }
 
 static void
-take_shot (void)
+take_shot (guint video)
 {
+  guint *is_video = g_slice_alloc (sizeof (guint));
+  *is_video = video;
   if (shot_timeout_id != 0)
     {
       g_source_remove (shot_timeout_id);
@@ -432,7 +452,7 @@ take_shot (void)
     }
   shot_timeout_id = g_timeout_add_seconds (1,
                                            decrease_time_to_take_shot,
-                                           NULL);
+                                           is_video);
 }
 
 static gboolean
@@ -443,6 +463,7 @@ on_key_press (ClutterActor *actor,
   GFreenectDevice *kinect;
   gint seconds = -1;
   gint aux;
+  gint video = FALSE;
   gdouble angle;
   guint key;
   g_return_val_if_fail (event != NULL, FALSE);
@@ -460,8 +481,13 @@ on_key_press (ClutterActor *actor,
       set_orientation ();
       break;
     case CLUTTER_KEY_space:
-      seconds = 3;
-      take_shot ();
+      seconds = DEFAULT_SECONDS_TO_SHOOT;
+      take_shot (1);
+      video = TRUE;
+      break;
+    case CLUTTER_KEY_Tab:
+      seconds = DEFAULT_SECONDS_TO_SHOOT;
+      take_shot (0);
       break;
     case CLUTTER_KEY_plus:
       set_threshold (100);
@@ -482,7 +508,7 @@ on_key_press (ClutterActor *actor,
       seconds_to_record -= 1;
       break;
     }
-  set_info_text (seconds);
+  set_info_text (seconds, video);
   return TRUE;
 }
 
@@ -494,7 +520,8 @@ create_instructions (void)
   text = clutter_text_new ();
   clutter_text_set_markup (CLUTTER_TEXT (text),
                          "<b>Instructions:</b>\n"
-                         "\tTake shot and save:  \tSpace bar\n"
+                         "\tTake video and save:  \t\t\tSpace bar\n"
+                         "\tTake shot and save:  \t\t\tTab\n"
                          "\tSet tilt angle:  \t\t\t\tUp/Down Arrows\n"
                          "\tIncrease threshold:  \t\t\t+/-\n"
                          "\tSwitch orientation: \t\t\to\n"
@@ -547,7 +574,7 @@ on_new_kinect_device (GObject      *obj,
   clutter_container_add_actor (CLUTTER_CONTAINER (stage), video_tex);
 
   info_text = clutter_text_new ();
-  set_info_text (-1);
+  set_info_text (-1, FALSE);
   clutter_container_add_actor (CLUTTER_CONTAINER (stage), info_text);
 
   instructions = create_instructions ();
