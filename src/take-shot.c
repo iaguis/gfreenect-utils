@@ -481,12 +481,12 @@ on_key_press (ClutterActor *actor,
       set_orientation ();
       break;
     case CLUTTER_KEY_space:
-      seconds = DEFAULT_SECONDS_TO_SHOOT;
+      seconds = DEFAULT_SECONDS_TO_SHOOT + 1;
       take_shot (1);
       video = TRUE;
       break;
     case CLUTTER_KEY_Tab:
-      seconds = DEFAULT_SECONDS_TO_SHOOT;
+      seconds = DEFAULT_SECONDS_TO_SHOOT + 1;
       take_shot (0);
       break;
     case CLUTTER_KEY_plus:
