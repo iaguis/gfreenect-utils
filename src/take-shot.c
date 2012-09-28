@@ -432,7 +432,7 @@ take_shot (void)
 }
 
 static gboolean
-on_key_release (ClutterActor *actor,
+on_key_press (ClutterActor *actor,
                 ClutterEvent *event,
                 gpointer data)
 {
@@ -525,8 +525,8 @@ on_new_kinect_device (GObject      *obj,
 
   g_signal_connect (stage, "destroy", G_CALLBACK (on_destroy), kinect);
   g_signal_connect (stage,
-                    "key-release-event",
-                    G_CALLBACK (on_key_release),
+                    "key-press-event",
+                    G_CALLBACK (on_key_press),
                     kinect);
 
   depth_tex = clutter_cairo_texture_new (width, height);
