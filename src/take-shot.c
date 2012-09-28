@@ -29,6 +29,7 @@ static GFreenectDevice *kinect = NULL;
 static ClutterActor *info_text;
 static ClutterActor *depth_tex;
 static ClutterActor *video_tex;
+static ClutterActor *instructions;
 
 static guint THRESHOLD_BEGIN = 500;
 /* Adjust this value to increase of decrease
@@ -42,6 +43,9 @@ static gint seconds_to_shoot = 2;
 static gint seconds_to_record = 5;
 static GTimer *timer;
 
+static gint width = 640;
+static gint height = 480;
+
 static gchar *directory_name;
 
 static gboolean VERTICAL = FALSE;
@@ -54,6 +58,23 @@ typedef struct
   gint reduced_width;
   gint reduced_height;
 } BufferInfo;
+
+static void
+set_orientation ()
+{
+  ClutterActor *stage;
+
+  stage = clutter_stage_get_default ();
+
+  clutter_actor_set_size (video_tex, width, height);
+  clutter_actor_set_size (depth_tex, width, height);
+  clutter_cairo_texture_set_surface_size (CLUTTER_CAIRO_TEXTURE (depth_tex), width, height);
+  clutter_cairo_texture_set_surface_size (CLUTTER_CAIRO_TEXTURE (video_tex), width, height);
+  clutter_actor_set_size (stage, width * 2, height + 250);
+  clutter_actor_set_position (video_tex, width, 0.0);
+  clutter_actor_set_position (info_text, 50, height + 20);
+  clutter_actor_set_position (instructions, 50, height + 70);
+}
 
 static void
 grayscale_buffer_set_value (guchar *buffer, gint index, guchar value)
@@ -417,6 +438,7 @@ on_key_release (ClutterActor *actor,
 {
   GFreenectDevice *kinect;
   gint seconds = -1;
+  gint aux;
   gdouble angle;
   guint key;
   g_return_val_if_fail (event != NULL, FALSE);
@@ -428,6 +450,10 @@ on_key_release (ClutterActor *actor,
     {
     case CLUTTER_KEY_o:
       VERTICAL = !VERTICAL;
+      aux = width;
+      width = height;
+      height = aux;
+      set_orientation ();
       break;
     case CLUTTER_KEY_space:
       seconds = 3;
@@ -479,10 +505,8 @@ on_new_kinect_device (GObject      *obj,
                       GAsyncResult *res,
                       gpointer      user_data)
 {
-  ClutterActor *stage, *instructions;
+  ClutterActor *stage;
   GError *error = NULL;
-  gint width = 640;
-  gint height = 480;
 
   kinect = gfreenect_device_new_finish (res, &error);
   if (kinect == NULL)
@@ -497,7 +521,6 @@ on_new_kinect_device (GObject      *obj,
 
   stage = clutter_stage_get_default ();
   clutter_stage_set_title (CLUTTER_STAGE (stage), "Kinect Test");
-  clutter_actor_set_size (stage, width * 2, height + 200);
   clutter_stage_set_user_resizable (CLUTTER_STAGE (stage), TRUE);
 
   g_signal_connect (stage, "destroy", G_CALLBACK (on_destroy), kinect);
@@ -510,17 +533,16 @@ on_new_kinect_device (GObject      *obj,
   clutter_container_add_actor (CLUTTER_CONTAINER (stage), depth_tex);
 
   video_tex = clutter_cairo_texture_new (width, height);
-  clutter_actor_set_position (video_tex, width, 0.0);
   clutter_container_add_actor (CLUTTER_CONTAINER (stage), video_tex);
 
   info_text = clutter_text_new ();
   set_info_text (-1);
-  clutter_actor_set_position (info_text, 50, height + 20);
   clutter_container_add_actor (CLUTTER_CONTAINER (stage), info_text);
 
   instructions = create_instructions ();
-  clutter_actor_set_position (instructions, 50, height + 70);
   clutter_container_add_actor (CLUTTER_CONTAINER (stage), instructions);
+
+  set_orientation ();
 
   clutter_actor_show_all (stage);
 
