@@ -251,7 +251,8 @@ on_depth_frame (GFreenectDevice *kinect, gpointer user_data)
   grayscale_buffer = create_grayscale_buffer (buffer_info,
                                               1);
 
-  g_slice_free1 (sizeof (guint16) * width * height, transformed_depth);
+  if (VERTICAL)
+    g_slice_free1 (sizeof (guint16) * width * height, transformed_depth);
 
   if (record_shot || record_video)
     {
@@ -350,7 +351,8 @@ on_video_frame (GFreenectDevice *kinect, gpointer user_data)
       g_error_free (error);
     }
 
-  g_slice_free1 (sizeof (gchar) * width * height * 3, transformed_buffer);
+  if (VERTICAL)
+    g_slice_free1 (sizeof (gchar) * width * height * 3, transformed_buffer);
 }
 
 static void
